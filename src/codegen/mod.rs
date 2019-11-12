@@ -1851,6 +1851,11 @@ impl CodeGenerator for CompInfo {
                 pub union #canonical_ident
             }
         } else {
+            if self.is_forward_declaration() {
+                /* ZZZ: "struct foo;" declaration followed by "typedef struct { ... } foo;" causes a
+                 * clash. So do not emit the declaration for the first one. */
+                return;
+            }
             quote! {
                 #( #attributes )*
                 pub struct #canonical_ident
@@ -3332,7 +3337,10 @@ impl TryToRustTy for Type {
                 {
                     return self.try_to_opaque(ctx, item);
                 }
-
+                if info.is_forward_declaration() {
+                    /* ZZZ: do not reference the forward-declaration type */
+                    return self.try_to_opaque(ctx, item);
+                }
                 utils::build_path(item, ctx)
             }
             TypeKind::Opaque => self.try_to_opaque(ctx, item),
